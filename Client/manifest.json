@@ -1,0 +1,10 @@
+{
+     "name": "CrowdLearn",
+     "version": "1",
+     "manifest_version": 2,
+     "content_scripts": [{
+         "js": ["inject.js"],
+         "matches": ["http://www.amitpatel.me/"]
+      }],
+     "web_accessible_resources": ["worker.js", "convnet.js", "rl.js", "https://cdn.socket.io/socket.io-1.4.5.js"]
+}

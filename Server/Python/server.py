@@ -1,7 +1,8 @@
-import socketio
-import eventlet
-from flask import Flask, render_template
 
+from flask import Flask, render_template
+import eventlet
+
+from master import Master
 sio = socketio.Server()
 app = Flask(__name__)
 

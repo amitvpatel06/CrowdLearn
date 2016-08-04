@@ -1,25 +1,26 @@
 
-var rl = require('./rl.js'); 
+var R = require('./rl.js'); 
 
 
 
-function Master(socketServer, hyerparams, data, graphRep) {
+function Master(socketServer, hyperparams, data, graphRep) {
 	this.server = socketServer;
 	this.data = data; 
 	this.model = graphRep; 
-	this.epochs = hyerparams.epochs || 10;
-	this.RL = isRL; 
+	this.epochs = hyperparams.epochs || 2000;
 	this.graphMats = {};
 	this.accumulatedGrads = {};
+	this.workers = {};
 	this.ready = {}; 
 	this.working = {}; 
+	this.i = 0;
 	this.mu = hyperparams.initMu;
 	this.std = hyperparams.initStd;
 	this.solver = new R.Solver();
 	this.batchSize = hyperparams.batchSize || 10
-	this.lr = hyerparams.lr || 0.01;
-	this.regc = hyerparams.regularization || 0.00001;
-	this.clip = hyerparams.clip || 5.0; 
+	this.lr = hyperparams.lr || 0.01;
+	this.regc = hyperparams.regularization || 0.00001;
+	this.clip = hyperparams.clip || 5.0; 
 }
 
 var fillMat = function(input, mat) {
@@ -39,39 +40,52 @@ Master.prototype.createGraph = function() {
 }
 
 Master.prototype.sendWeights = function(socket) {
-	var json = {}
+	var json = {};
+	json.data = {};
 	for(var mat in this.graphMats) {
-		json[mat] = this.graphMats[mat].toJSON();
+		json.data[mat] = this.graphMats[mat].toJSON();
 	}
+	json['step_cache'] = this.solver.step_cache; 
+	json.id = socket.conn.id;
 	socket.emit('weights', json);
 }
 
 Master.prototype.sendBatch = function(socket, batch) {
-	socket.emit('batch', batch.toJSON());
+	socket.emit('batch', batch);
 }
 
-Master.prototype.addSocketCallBacks = function(isUpdate) {
-	if(isUpdate) {
-		this.server.on('update', function(update) {
-			for(var mat in update) {
-				var toUpdate = this.graphMats[update]; 
-				var update = update[mat]; 
-				for(var weight in toUpdate.w) {
-					toUpdate[weight] -= update[weight]; 
-				}
+Master.prototype.addSocketCallBacks = function() {
+
+	var updateWeights = function(data) {
+		for(var mat in data.grads) {
+			var toUpdate = this.graphMats[mat]; 
+			this.i +=1;
+			var update = data.grads[mat]; 
+			for(var weight in toUpdate.w) {
+				toUpdate[weight] -= update[weight]; 
 			}
-		})
+		}
+		if(this.workers[data.id]) {
+			console.log('worker');
+			this.ready[data.id] = this.workers[data.id];
+		}
 	}
-	else{
-		console.log("feature not yet available")
-	}
+	var updateWeightscb = updateWeights.bind(this);
+	
+
 	var connect = function(socket) {
 		this.ready[socket.conn.id] = socket; 
+		this.workers[socket.conn.id] = socket; 
+		socket.on('update', updateWeightscb);
+		this.train(); 
 	}
 	var disconnect = function(socket) {
 		var sid = socket.conn.id; 
 		if(this.ready[sid]) {
 			delete this.ready[sid];
+		}
+		if(this.workers[sid]) {
+			delete this.workers[sid];
 		}
 		if(this.working[sid]) {
 			delete this.working[sid];
@@ -86,32 +100,40 @@ Master.prototype.addSocketCallBacks = function(isUpdate) {
 }
 
 
-Master.prototype.forward  = function(batch){
+Master.prototype.forward  = function(batch) {
 	var inputs = {}
-	for(var input in this.graphRep.inputs) {
-		inputs[input] = fillMat(batch[input], new R.Mat(this.graphRep.inputSize, this.batchSize));
+	for(var input in this.model.inputs) {
+		inputs[input] = fillMat(batch[input], new R.Mat(this.model.inputSize, this.batchSize));
 	}
-	this.graphRep.forward(this.graph, this.graphMats, inputs);
+	this.model.forward(this.graph, this.graphMats, inputs);
 }
-
+// Downpour SGD algorithm with RMS prop
 Master.prototype.train = function() {
+	var batchSize = this.batchSize;
 	for(var i = 0; i < this.epochs; i++) {
 		var idx = 0; 
 		while(idx < this.data.train.length) {
-
 			for(var worker in this.ready) {
 				var batch = this.data.train.slice(idx, idx + this.batchSize);
 				var socket = this.ready[worker];
-				this.sendWeights(socket);
+				this.sendWeights(socket, batch)
 				this.sendBatch(socket, batch);
 				idx += batchSize;
+				delete this.ready[worker]
 				if(idx + batchSize > this.data.train.length) {
 					break;
 				}
 			}
+			if(idx + batchSize > this.data.train.length) {
+				break;
+			}
 			var batch = this.data.train.slice(idx, idx + this.batchSize);
-			this.forward(batch)
-			this.solver.step(this.model, this.lr, this.regc, this.clip); 
+			this.forward(batch);
+			this.graph.backward();
+			this.graph.backprop = []; 
+			idx += batchSize;
 		}
 	}
 }
+
+module.exports = Master; 

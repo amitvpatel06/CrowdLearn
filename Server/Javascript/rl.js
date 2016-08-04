@@ -1531,4 +1531,5 @@ global.DQNAgent = DQNAgent;
 //global.DeterministPG = DeterministPG;
 })(RL);
 
+module.exports = R; 
 

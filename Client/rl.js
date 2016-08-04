@@ -390,7 +390,7 @@ var R = {}; // the Recurrent library
     }
 
   var Solver = function() {
-    this.decay_rate = 0.999;
+    this.decay_rate = 0.9;
     this.smooth_eps = 1e-8;
     this.step_cache = {};
   }

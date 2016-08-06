@@ -6,7 +6,10 @@
   "author": "Amit Patel",
   "license": "MIT",
   "dependencies": {
+    "async": "^2.0.1",
     "express": "^4.13.4",
-    "socket.io": "^1.4.8"
+    "paralleljs": "^0.2.1",
+    "socket.io": "^1.4.8",
+    "webworker-threads": "^0.7.8"
   }
 }

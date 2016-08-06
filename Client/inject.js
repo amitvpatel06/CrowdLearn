@@ -8,8 +8,6 @@ rnet.src = chrome.extension.getURL('rl.js');
 var socket = document.createElement('script');
 socket.src = 'https://cdn.socket.io/socket.io-1.4.5.js';
 
-
-
 (document.head||document.documentElement).appendChild(convnet);
 (document.head||document.documentElement).appendChild(rnet);
 (document.head||document.documentElement).appendChild(socket);

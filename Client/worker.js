@@ -5,6 +5,7 @@ var fillMat = function(input, mat) {
 			mat.set(i, j, input[i][j]);
 		}
 	} 
+	return mat;
 }
 
 function Worker(graphRep, hyperparams) {
@@ -31,10 +32,8 @@ Worker.prototype.createModel = function(initial_message) {
 }
 
 Worker.prototype.train = function(batch) {
-	var inputs = {}
-	inputs = fillMat(batch, new R.Mat(this.batchSize,  this.model.inputSize));
-	
-	this.model.forward(this.graph, this.graphMats, inputs);
+	var inputs = fillMat(batch.inputs, new R.Mat(this.batchSize,  this.model.inputSize));
+	this.model.forward(this.graph, this.graphMats, batch);
 	this.graph.backward();
 	for(var mat in this.graphMats) {
 		this.accumulatedGradient[mat] = this.graphMats[mat].dw;
@@ -42,9 +41,19 @@ Worker.prototype.train = function(batch) {
 	var json = {};
 	json.grads = this.accumulatedGradient;
 	json.id = this.id;
+	json.stop = batch.stop ? true : false;
 	this.socket.emit('update', json);
+	this.solver.step(this.graphMats, this.lr, this.regc, this.lr);
+	this.graph.backprop = [];
 }
 
+Worker.prototype.sendRawData = function(data) {
+	var raw = {
+		data: data,
+		id: this.id
+	}
+	this.socket.emit('raw', raw);
+}
 
 Worker.prototype.setUp =  function(url) {
 	this.socket = io.connect(url);
@@ -53,6 +62,7 @@ Worker.prototype.setUp =  function(url) {
 	}
 
 	var trainBatch = function(message) {
+		console.log(message);
 		this.train(message); 
 	}
 
@@ -63,15 +73,19 @@ Worker.prototype.setUp =  function(url) {
 	this.socket.on('batch', trainBatch.bind(this)); 
 }
 
+
+// example graph representation
 var graphRep = {
-	forward: function(graph, graphMats, inputs) {
+	forward: function(graph, graphMats, batch) {
+		for(var i = 0; i < 100000000; i++){
+			var j = 2 * 2.09;
+		}
 		var y = R.RandMat(1,1,0,1);
 		y.set(0,0,1);
 		var z = graph.add(y, graphMats['W']);
 		for(var idx in z.dw){
 			z.dw[idx] = 1;
 		}
-		console.log(graphMats);
 	},
 	params: {
 		'W': {

@@ -1,13 +1,4 @@
 
-var fillMat = function(input, mat) {
-	for(var i = 0; i < input.length; i++) {
-		for(var j = 0; j < input[0].length; j++) {
-			mat.set(i, j, input[i][j]);
-		}
-	} 
-	return mat;
-}
-
 function Worker(graphRep, hyperparams) {
 	this.accumulatedGradient = {}; 
 	this.model = graphRep;
@@ -32,7 +23,9 @@ Worker.prototype.createModel = function(initial_message) {
 }
 
 Worker.prototype.train = function(batch) {
-	var inputs = fillMat(batch.inputs, new R.Mat(this.batchSize,  this.model.inputSize));
+	// vectorize inputs first
+	var inputs = utils.fillMat(batch.inputs, new R.Mat(this.batchSize,  this.model.inputSize));
+	batch.inputs = inputs;
 	this.model.forward(this.graph, this.graphMats, batch);
 	this.graph.backward();
 	for(var mat in this.graphMats) {
@@ -42,6 +35,7 @@ Worker.prototype.train = function(batch) {
 	json.grads = this.accumulatedGradient;
 	json.id = this.id;
 	json.stop = batch.stop ? true : false;
+	json.cost = this.model.cost;
 	this.socket.emit('update', json);
 	this.solver.step(this.graphMats, this.lr, this.regc, this.lr);
 	this.graph.backprop = [];
@@ -62,7 +56,6 @@ Worker.prototype.setUp =  function(url) {
 	}
 
 	var trainBatch = function(message) {
-		console.log(message);
 		this.train(message); 
 	}
 
@@ -73,32 +66,39 @@ Worker.prototype.setUp =  function(url) {
 	this.socket.on('batch', trainBatch.bind(this)); 
 }
 
-
-// example graph representation
 var graphRep = {
+	total: 0,
+	totalTrained: 0, 
+	cost: 0,
 	forward: function(graph, graphMats, batch) {
-		for(var i = 0; i < 100000000; i++){
-			var j = 2 * 2.09;
-		}
-		var y = R.RandMat(1,1,0,1);
-		y.set(0,0,1);
-		var z = graph.add(y, graphMats['W']);
-		for(var idx in z.dw){
-			z.dw[idx] = 1;
-		}
+		var dot_prod = graph.mul(batch.inputs, graphMats['W']);
+		var hiddens = utils.addBias(graph, graphMats['b'], dot_prod);
+		var activations = utils.softmaxBatch(hiddens);
+		this.cost = utils.softmaxBatchGrads(activations, hiddens, batch.labels);
+		this.totalTrained += 10;
+		this.total += this.cost;
+		console.log(this.cost);
 	},
 	params: {
 		'W': {
-			'nr': 1,
+			'nr': 784,
+			'nc': 10
+		},
+		'b': {
+			'nr': 10, 
 			'nc': 1
 		}
 	},
-	inputSize: 1
+	startImmediately: true,
+	inputSize: 784
 }
 var hyperparams = {
+	lr: 0.01,
 	initMu: 0,
 	initStd: 1,
-	batchSize: 2
+	batchSize: 10,
+	epochs: 100,
+	warmup: 1,
 }
 
 var work = new Worker(graphRep, hyperparams);

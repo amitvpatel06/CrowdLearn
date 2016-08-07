@@ -3,47 +3,49 @@ var server = require('http').Server(app);
 var io = require('socket.io')(server);
 var R = require('./rl.js');
 var Master = require('./master.js');
-
-var fillMat = function(input, mat) {
-	for(var i = 0; i < input.length; i++) {
-		for(var j = 0; j < input[0].length; j++) {
-			mat.set(i, j, input[i][j]);
-		}
-	}
-}
+var utils = require('./utils.js');
+var mnist = require('mnist');
 
 var graphRep = {
 	forward: function(graph, graphMats, batch) {
-		var inputs = batch.inputs; 
-		for(var i = 0; i < 100000000; i++){
-			var j = 2 * 2.09;
-		}
-		var y = R.RandMat(1,1,0,1);
-		y.set(0,0,1);
-		var z = graph.add(y, graphMats['W']);
-		for(var idx in z.dw){
-			z.dw[idx] = 1;
-		}
+		var dot_prod = graph.mul(batch.inputs, graphMats['W']);
+		var hiddens = utils.addBias(graph, graphMats['b'], dot_prod);
+		var activations = utils.softmaxBatch(hiddens);
+		var cost = utils.softmaxBatchGrads(activations, hiddens, batch.labels);
+		console.log(cost);
 	},
 	params: {
 		'W': {
-			'nr': 1,
+			'nr': 784,
+			'nc': 10
+		},
+		'b': {
+			'nr': 10, 
 			'nc': 1
 		}
 	},
-	inputSize: 1
+	startImmediately: true,
+	inputSize: 784
 }
 var hyperparams = {
+	lr: 0.01,
 	initMu: 0,
 	initStd: 1,
-	batchSize: 2,
+	batchSize: 10,
 	epochs: 100,
-	warmup: 100,
+	warmup: 1,
 }
-var data = {
-	'train': [[1], [1], [2], [2], [3], [3], [4], [4], [5], [5], [6], [6]],
-	'labels': [[1], [1], [2], [2], [3], [3], [4], [4], [5], [5], [6], [6]]
+
+var set = mnist.set(10000, 1);
+var data = {};
+data.labels = [];
+data.inputs = [];
+for(var j in set.training) {
+	data.inputs.push(set.training[j].input);
+	data.labels.push(set.training[j].output);
 }
+
+
 server.listen(80);
 var test = new Master(io, hyperparams, data, graphRep); 
 test.createGraph();

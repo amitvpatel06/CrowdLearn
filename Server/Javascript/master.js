@@ -33,6 +33,8 @@ function Master(socketServer, hyperparams, data, graphRep) {
 	this.lr = hyperparams.lr || 0.01;
 	this.regc = hyperparams.regularization || 0.00001;
 	this.clip = hyperparams.clip || 5.0; 
+	this.loss = 0; 
+	this.batches = 0;
 }
 
 
@@ -56,8 +58,8 @@ Master.prototype.sendWeights = function(socket) {
 }
 
 Master.prototype.incrementUpdateCounter = function() {
-	for(var socket in self.updateCounter) {
-		self.updateCounter[socket] += 1; 
+	for(var socket in this.updateCounter) {
+		this.updateCounter[socket] += 1; 
 	}
 }
 
@@ -75,20 +77,27 @@ Master.prototype.addSocketCallBacks = function() {
 			}
 		}
 		this.solver.step(this.graphMats, this.lr, this.regc, this.lr);
-		self.incrementUpdateCounter()
+		this.incrementUpdateCounter();
+		this.loss += data.cost;
+		this.batches += 1;
+		if(this.batches >= 1000) {
+			console.log(this.loss / this.batches);
+			this.loss = 0;
+			this.batches = 0;
+		}
 		if(this.updateCounter[data.id] >= this.update) {
 			this.sendWeights(this.workers[data.id]);
 			this.updateCounter[data.id] = 0; 
 		}
 		if(!data.stop) {
-			var inputs = this.data.train.slice(this.idx, this.idx + this.batchSize);
+			var inputs = this.data.inputs.slice(this.idx, this.idx + this.batchSize);
 			var labels = this.data.labels.slice(this.idx, this.idx + this.batchSize);
 			var batch = {
 				inputs: inputs,
 				labels: labels
 			}
 			this.idx += this.batchSize
-			if(this.idx + this.batchSize > this.data.train.length) {
+			if(this.idx + this.batchSize > this.data.inputs.length) {
 				this.idx = 0
 				this.epochs = this.epochs - 1;
 			}
@@ -105,7 +114,7 @@ Master.prototype.addSocketCallBacks = function() {
 
 	var preProcess = function(raw) {
 		console.log(raw);
-		var batch = this.graphRep.preProcess(raw.data);
+		var batch = this.model.preProcess(raw.data);
 		batch.stop = true;
 		this.sendBatch(this.workers[raw.id], batch);
 	}
@@ -117,8 +126,8 @@ Master.prototype.addSocketCallBacks = function() {
 		this.sendWeights(socket)
 		socket.on('update', updateWeightscb);
 		socket.on('raw', preProcesscb);
-		if(this.graphRep.startImmediately) {
-			var inputs = this.data.train.slice(this.idx, this.idx + this.batchSize);
+		if(this.model.startImmediately) {
+			var inputs = this.data.inputs.slice(this.idx, this.idx + this.batchSize);
 			var labels = this.data.labels.slice(this.idx, this.idx + this.batchSize);
 			var batch = {
 				inputs: inputs,
@@ -151,10 +160,9 @@ Master.prototype.addSocketCallBacks = function() {
 
 
 Master.prototype.forward  = function(batch) {
-	var inputs = {}
-	for(var input in this.model.inputs) {
-		inputs[input] = fillMat(batch.train[input], new R.Mat(this.model.inputSize, this.batchSize));
-	}
+	// vectorize inputs first
+	var inputs = fillMat(batch.inputs[input], new R.Mat(this.batchSize, this.model.inputSize));
+	batch.inputs = inputs
 	this.model.forward(this.graph, this.graphMats, batch);
 }
 
@@ -163,8 +171,8 @@ Master.prototype.train = function() {
 	var batchSize = this.batchSize;
 	for(var i = 0; i < this.hyperparams.warmup; i++) {
 		var idx = 0; 
-		while(idx < this.data.train.length) {
-			var inputs = this.data.train.slice(idx, idx + this.batchSize);
+		while(idx < this.data.inputs.length) {
+			var inputs = this.data.inputs.slice(idx, idx + this.batchSize);
 			var labels = this.data.labels.slice(this.idx, this.idx + this.batchSize);
 			var batch = {
 				inputs: inputs,
@@ -176,7 +184,7 @@ Master.prototype.train = function() {
 
 			idx += batchSize
 
-			if(idx + batchSize > this.data.train.length) {
+			if(idx + batchSize > this.data.inputs.length) {
 				break;
 			}
 		}

@@ -4,11 +4,11 @@ A Javascript client + server side system for doing distributed machine learning 
 
 Developers can use this library to rapdily prototype, deploy, and train machine learning algorithms that can gather all of the massive amounts of data available in client-side interactions and use them to train a single model on the fly. This eliminates the work of gathering, storing, and preprocessing log data and then feeding it to a machine learning model. It can also be used to train models on datasets already on a server by farming out the computations to many different clients, which can execute them in parallel. 
 
-<h1>What does that mean?<h1>
+<h1>What does that mean?</h1>
 
 CrowdLearn allows users to write and train machine learning algorithms in JavaScript with both client and server-side libraries using a popular distributed optimization algorithm: Downpour Stochastic Gradient Descent. Traditionally used only in high performance computing clusters for training massive models, Downpour Stochastic gradient trains a machine learning model(usually a neural network) by using a central master sever for distributing data shards to worker nodes to train the model on and then applying the accumulated gradient updates to a central parameter store, all while keeping the model weights in sync across the nodes.  CrowdLearn implements this algorithm for web by treating a central server as the master and creating worker side nodes on the client side. It then uses websockets(SocketIO) to implement the downpour algorithm! It also allows worker nodes to gather contextual information from things like user interactions with the webpage, send it to the server for preprocessing, and then train a model on it immediately and asynchronously. 
 
-<h1>How does the API work?<h1>
+<h1>How does the API work?</h1>
 Neural networks and other graphical models are very easy to write in CrowdLearn. The library centers around 3 classes: Master, Worker, and GraphRep. 
 
 First, set up a SocketIO server: 

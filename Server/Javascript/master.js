@@ -33,8 +33,6 @@ function Master(socketServer, hyperparams, data, graphRep) {
 	this.lr = hyperparams.lr || 0.01;
 	this.regc = hyperparams.regularization || 0.00001;
 	this.clip = hyperparams.clip || 5.0; 
-	this.loss = 0; 
-	this.batches = 0;
 }
 
 
@@ -78,13 +76,7 @@ Master.prototype.addSocketCallBacks = function() {
 		}
 		this.solver.step(this.graphMats, this.lr, this.regc, this.lr);
 		this.incrementUpdateCounter();
-		this.loss += data.cost;
-		this.batches += 1;
-		if(this.batches >= 1000) {
-			console.log(this.loss / this.batches);
-			this.loss = 0;
-			this.batches = 0;
-		}
+		this.model.reportCost(data.cost);
 		if(this.updateCounter[data.id] >= this.update) {
 			this.sendWeights(this.workers[data.id]);
 			this.updateCounter[data.id] = 0; 

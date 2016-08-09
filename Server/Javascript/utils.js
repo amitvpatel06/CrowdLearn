@@ -78,6 +78,35 @@ var utils = {
 			}
 		}
 		return out; 
+	},
+
+	softmaxLayer: function(graph, graphMats, inputs, labels, weights, bias) {
+		var mat_prod = graph.mul(inputs, graphMats[weights]);
+		var hiddens = this.addBias(graph, graphMats[bias], mat_prod);
+		var activations = this.softmaxBatch(hiddens);
+		var cost = this.softmaxBatchGrads(activations, hiddens, labels);
+		return cost;
+	},
+
+	sigmoidLayer: function(graph, graphMats, inputs, weights, bias) {
+		var mat_prod = graph.mul(inputs, graphMats[weights]);
+		var hiddens = this.addBias(graph, graphMats[bias], mat_prod);
+		var activations = graph.sigmoid(hiddens);
+		return activations;
+	},
+
+	reluLayer: function(graph, graphMats, inputs, weights, bias) {
+		var mat_prod = graph.mul(inputs, graphMats[weights]);
+		var hiddens = this.addBias(graph, graphMats[bias], mat_prod);
+		var activations = graph.relu(hiddens);
+		return activations;
+	},
+
+	tanhLayer: function(graph, graphMats, inputs, weights, bias) {
+		var mat_prod = graph.mul(inputs, graphMats[weights]);
+		var hiddens = this.addBias(graph, graphMats[bias], mat_prod);
+		var activations = graph.tanh(hiddens);
+		return activations;
 	}
 }
 module.exports = utils;

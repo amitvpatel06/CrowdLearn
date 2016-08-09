@@ -7,19 +7,40 @@ var utils = require('./utils.js');
 var mnist = require('mnist');
 
 var graphRep = {
+	cost: 0,
+	loss: 0,
+	total: 0,
+	totalTrained: 0,
+	batches: 0,
 	forward: function(graph, graphMats, batch) {
-		var dot_prod = graph.mul(batch.inputs, graphMats['W']);
-		var hiddens = utils.addBias(graph, graphMats['b'], dot_prod);
-		var activations = utils.softmaxBatch(hiddens);
-		var cost = utils.softmaxBatchGrads(activations, hiddens, batch.labels);
-		console.log(cost);
+		var hiddens = utils.sigmoidLayer(graph, graphMats, batch.inputs, 'W1', 'b1')
+		this.cost = utils.softmaxLayer(graph, graphMats, hiddens, batch.labels, 'W2', 'b2');
+		this.totalTrained += 10;
+		this.total += this.cost;
 	},
+	reportCost: function(cost) {
+		this.loss += cost;
+		this.batches += 1;
+		if(this.batches >= 1000) {
+			console.log(this.loss / this.batches);
+			this.loss = 0;
+			this.batches = 0;
+		}
+	},	
 	params: {
-		'W': {
+		'W1': {
 			'nr': 784,
 			'nc': 10
 		},
-		'b': {
+		'b1': {
+			'nr': 10, 
+			'nc': 1
+		},
+		'W2': {
+			'nr': 10,
+			'nc': 10
+		},
+		'b2': {
 			'nr': 10, 
 			'nc': 1
 		}

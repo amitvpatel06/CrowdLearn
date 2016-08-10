@@ -94,5 +94,5 @@ Masters need all of these things to build and workers need just the graphRep and
 var master = new Master(io, graphRep, hyperparams, data);
 var worker = new Worker(graphRep, hyperparams);
 ```
-All you need to get started are the contents of the Server/Javascript and the Client folders(the tensorflow version is still under construction). I use a chrome extension to inject my workers into webpages, but any delivery method that embeds the dependencies of the worker(the libarary utils, recurrentjs, and SocketIO) in a page works! Similarly, any server implementation that uses master.js and has utils.js, recurrentjs, and SocketIO available is workable. 
+All you need to get started are the contents of the Server/Javascript and the Client folders(the tensorflow version is still under construction). I use a chrome extension to inject my workers into webpages, but any delivery method that embeds the dependencies of the worker(the libarary utils, recurrentjs, and SocketIO) in a page works! Similarly, any server implementation that uses master.js and has utils.js, recurrentjs, and SocketIO available is workable. For complete examples, see server.js and Clients for an implementation using express for the server and a chrome extension on the client side.
 

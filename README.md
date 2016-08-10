@@ -12,12 +12,14 @@ CrowdLearn allows users to write and train machine learning algorithms in JavaSc
 Neural networks and other graphical models are very easy to write in CrowdLearn. The library centers around 3 classes: Master, Worker, and GraphRep. 
 
 First, set up a SocketIO server: 
-''' javascript
+
+```javascript
 var io = require('socket.io')(server);
-'''
+```
 
 Use GraphRep to specify your neural model(in this case a simple 2 layer net for MNIST digit classification):
-''' javascript
+
+```javascript
 var graphRep = {
 	updateWorkerCount:100,
 	cost: 0,
@@ -59,11 +61,11 @@ var graphRep = {
 	startImmediately: true,
 	inputSize: 784
 }
-'''
+```
 
 You must specify: the model parameters and their dimensions(including input size), what a forward pass of the model does(i.e the prediction procedure using the underlying graph, the underlying params, and an input batch), and how you want to report costs(appending any revelant variables to this.cost). The rest of the parameters are optional and have default values. Next you specify model hyperparameters(they all have defaults but you can specify all of the following):
 
-''' javascript
+```javascript
 var hyperparams = {
 	lr: 0.01, // Learning Rate
 	initMu: 0, // For parameter initialization
@@ -74,9 +76,9 @@ var hyperparams = {
 	regularization: 0.00001,
 	clip: 5.0 // for gradient size clipping
 }
-
+```
 Finally, you construct a data set(outting inputs and labels in the correct categories): 
-''' javascript
+```javascript
 var set = mnist.set(10000, 1);
 var data = {};
 data.labels = [];
@@ -85,12 +87,12 @@ for(var j in set.training) {
 	data.inputs.push(set.training[j].input);
 	data.labels.push(set.training[j].output);
 }
-'''
+```
 Now you have everything you need to build a model!
 Masters need all of these things to build and workers need just the graphRep and the hyperparams:
-'''
+```javascript
 var master = new Master(io, graphRep, hyperparams, data);
 var worker = new Worker(graphRep, hyperparams);
-'''
+```
 All you need to get started are the contents of the Server/Javascript and the Client folders(the tensorflow version is still under construction). I use a chrome extension to inject my workers into webpages, but any delivery method that embeds the dependencies of the worker(the libarary utils, recurrentjs, and SocketIO) in a page works! Similarly, any server implementation that uses master.js and has utils.js, recurrentjs, and SocketIO available is workable. 
 

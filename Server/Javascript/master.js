@@ -19,7 +19,7 @@ function Master(socketServer, hyperparams, data, graphRep) {
 	this.server = socketServer;
 	this.data = data; 
 	this.model = graphRep; 
-	this.hyperparams = hyperparams
+	this.hyperparams = hyperparams;
 	this.epochs = hyperparams.epochs || 20;
 	this.graphMats = {};
 	this.workers = {};
@@ -88,14 +88,14 @@ Master.prototype.addSocketCallBacks = function() {
 				inputs: inputs,
 				labels: labels
 			}
-			this.idx += this.batchSize
+			this.idx += this.batchSize;
 			if(this.idx + this.batchSize > this.data.inputs.length) {
-				this.idx = 0
+				this.idx = 0;
 				this.epochs = this.epochs - 1;
 			}
 			if(this.epochs <= 0) {
-				console.log(new Number(new Date()))
-				console.log('done')
+				console.log(new Number(new Date()));
+				console.log('done');
 				return; 
 			}
 			this.sendBatch(this.workers[data.id], batch);
@@ -115,7 +115,7 @@ Master.prototype.addSocketCallBacks = function() {
 	var connect = function(socket) {
 		this.workers[socket.conn.id] = socket; 
 		this.updateCounter[socket.conn.id] = 0; 
-		this.sendWeights(socket)
+		this.sendWeights(socket);
 		socket.on('update', updateWeightscb);
 		socket.on('raw', preProcesscb);
 		if(this.model.startImmediately) {
@@ -125,7 +125,7 @@ Master.prototype.addSocketCallBacks = function() {
 				inputs: inputs,
 				labels: labels
 			}
-			this.idx += this.batchSize
+			this.idx += this.batchSize;
 			if(this.epochs <= 0) {
 				return; 
 			}
@@ -154,7 +154,7 @@ Master.prototype.addSocketCallBacks = function() {
 Master.prototype.forward  = function(batch) {
 	// vectorize inputs first
 	var inputs = fillMat(batch.inputs[input], new R.Mat(this.batchSize, this.model.inputSize));
-	batch.inputs = inputs
+	batch.inputs = inputs;
 	this.model.forward(this.graph, this.graphMats, batch);
 }
 
@@ -174,14 +174,14 @@ Master.prototype.train = function() {
 			this.graph.backward();
 			this.graph.backprop = []; 
 
-			idx += batchSize
+			idx += batchSize;
 
 			if(idx + batchSize > this.data.inputs.length) {
 				break;
 			}
 		}
 	}
-	console.log('done warming up')
+	console.log('done warming up');
 }
 
 module.exports = Master; 
